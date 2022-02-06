@@ -1,5 +1,7 @@
 package com.radmir.clipboardClient.init.platform
 
+import org.apache.commons.exec.CommandLine
+import org.apache.commons.exec.DefaultExecutor
 import org.springframework.stereotype.Component
 import java.io.PrintWriter
 import java.util.*
@@ -10,11 +12,10 @@ class PlatformTermux: Platform {
 
     override fun notification(text: String, title: String) {
         try {
-            val command = Runtime.getRuntime().exec("cmd")
-            val stdIn = PrintWriter(command.outputStream)
-            stdIn.println("termux-toast -g top $title: $text")
-            stdIn.close()
-            command.waitFor()
+            val line = "python termuxNotify.py --title \"$title\" --text \"$text\""
+            val cmdLine = CommandLine.parse(line)
+            val executor = DefaultExecutor()
+            executor.execute(cmdLine)
         } catch (e: Exception) {
             e.printStackTrace()
         }

@@ -12,7 +12,7 @@ import javax.net.ssl.SSLContext
 @Component
 class WebSocketClientSSL {
 
-    val ws: WebSocket = getFactory().createSocket("wss://localhost:8080/test")
+    val ws: WebSocket = getFactory().createSocket("wss://192.168.0.102:8080/test")
 
     private fun getFactory(): WebSocketFactory {
         val sslContext = getSslContext("my-https.jks", "secret")

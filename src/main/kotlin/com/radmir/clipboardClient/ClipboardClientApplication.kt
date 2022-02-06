@@ -8,8 +8,9 @@ import org.springframework.boot.runApplication
 class ClipboardClientApplication
 
 fun main(args: Array<String>) {
-	val builder = SpringApplicationBuilder(ClipboardClientApplication::class.java)
-	builder.headless(false)
-	builder.run(*args)
-//	runApplication<ClipboardClientApplication>(*args)
+//	val builder = SpringApplicationBuilder(ClipboardClientApplication::class.java)
+//	builder.headless(false)
+//	builder.run(*args)
+//	System.setProperty("java.awt.headless", "false");
+	runApplication<ClipboardClientApplication>(*args)
 }
