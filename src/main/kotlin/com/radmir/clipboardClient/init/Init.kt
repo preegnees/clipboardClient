@@ -2,9 +2,16 @@ package com.radmir.clipboardClient.init
 
 import com.radmir.clipboardClient.database.h2.ConfigDAO
 import com.radmir.clipboardClient.database.h2.ConfigEntity
+import com.radmir.clipboardClient.init.gson.FromServer
+import com.radmir.clipboardClient.init.gson.Message
+import com.radmir.clipboardClient.init.gson.ToServer
 import com.radmir.clipboardClient.init.platform.Platform
 import com.radmir.clipboardClient.init.platform.PlatformDesktop
 import com.radmir.clipboardClient.init.platform.PlatformTermux
+import com.radmir.clipboardClient.network.WebSocketClientSSL
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.*
@@ -14,12 +21,14 @@ import javax.annotation.PostConstruct
 @Component
 class Init {
 
-//    @Autowired
-//    private lateinit var termux: PlatformTermux
-//    @Autowired
-//    private lateinit var desktop: PlatformDesktop
+    @Autowired
+    private lateinit var webSocketClientSSL: WebSocketClientSSL
     @Autowired
     private lateinit var storage: ConfigDAO
+    @Autowired
+    private lateinit var fromServer: FromServer
+    @Autowired
+    private lateinit var toServer: ToServer
 
     /**
     1) при старте приложение должно посмотреть в базу данных, если она пуста,
@@ -31,30 +40,55 @@ class Init {
     private val isConfigServer = "app...server..." // app...server...192.168.0.101:8080
     private val isConfigMyName = "app...myname..." // app...myname...radmir
     private val isConfigPairName = "app...pairname..." // app...pairname...bogdan
-    private val isConfigTimeout = "app...timeout..." // app...timeout...1000
+    private val isConfigTimeout = "app...timeout..." // app...timeout...500
     private val isConfigRun = "app...run..." // app...run...1 (start), app...run...0 (stop)
-    val service = getPlatform()
+
+    private val service = getPlatform()
+
+    private var newMessage = ""
+    private var oldMessage = ""
 
     @PostConstruct
     fun start() {
-        var oldText = ""
-        var newText = ""
-        while (true) {
-            Thread.sleep(try {
-                storage.getById("timeout").value!!.toLong()
-            } catch (e: Exception) {
-                1000
-            })
-            val fromClipboard = service.getFromClipboard()
-            newText = fromClipboard
-            if (isRun(fromClipboard)) {
-                if (!isServer(fromClipboard)) {
-                    if (!isMyName(fromClipboard)) {
-                        if (!isPairName(fromClipboard)) {
-                            if (!isTimeout(fromClipboard)) {
-                                if (newText != oldText) {
-                                    println(fromClipboard)
-                                    oldText = newText
+        listenSocket()
+    }
+
+    fun listenSocket() = runBlocking {
+        webSocketClientSSL.open()
+        service.setToClipboard("")
+        launch {
+            newMessage = webSocketClientSSL.listen()
+        }
+        launch {
+            var oldText = ""
+            var newText = ""
+            while (true) {
+                if (newMessage != oldMessage) {
+                    service.setToClipboard(fromServer.start(newMessage).text!!)
+                    service.notification(fromServer.start(newMessage).text!!, fromServer.start(newMessage).who!!)
+                    oldMessage = newMessage
+                }
+
+                delay(try {
+                    storage.getById("timeout").value!!.toLong()
+                } catch (e: Exception) {
+                    1000
+                })
+                val fromClipboard = service.getFromClipboard()
+                newText = fromClipboard
+                if (isRun(fromClipboard)) {
+                    if (!isServer(fromClipboard)) {
+                        if (!isMyName(fromClipboard)) {
+                            if (!isPairName(fromClipboard)) {
+                                if (!isTimeout(fromClipboard)) {
+                                    if (newText != oldText) {
+                                        webSocketClientSSL
+                                            .send(toServer
+                                                .start(Message(who = storage.getById("myName").value,
+                                                whom = storage.getById("pairName").value,
+                                                text = fromClipboard)))
+                                        oldText = newText
+                                    }
                                 }
                             }
                         }
@@ -63,6 +97,7 @@ class Init {
             }
         }
     }
+
     private fun isServer(text: String): Boolean {
         if (isConfigServer in text) {
             val server = text

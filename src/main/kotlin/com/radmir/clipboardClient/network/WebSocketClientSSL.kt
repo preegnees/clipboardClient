@@ -12,19 +12,12 @@ import javax.net.ssl.SSLContext
 @Component
 class WebSocketClientSSL {
 
-    fun init() {
+    val ws: WebSocket = getFactory().createSocket("wss://localhost:8080/test")
+
+    private fun getFactory(): WebSocketFactory {
         val sslContext = getSslContext("my-https.jks", "secret")
-        val factory = getFactory(999999999)
+        val factory = WebSocketFactory().setConnectionTimeout(999999999)
         factory.sslContext = sslContext
-        val ws = factory.createSocket("wss://localhost:8080/test")
-        open(ws)
-        send(ws, "hello world")
-        listen(ws)
-        close(ws)
-    }
-    private fun getFactory(millisecond: Int): WebSocketFactory {
-        val factory = WebSocketFactory()
-        factory.connectionTimeout = millisecond
         return factory
     }
     private fun getSslContext(fileName: String, key: String): SSLContext? {
@@ -35,21 +28,22 @@ class WebSocketClientSSL {
             )
             .build()
     }
-    private fun open(ws: WebSocket) {
+
+    fun open() {
         try {
             ws.connect()
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-    private fun send(ws: WebSocket, message: String) {
+    fun send(message: String) {
         try {
             ws.sendText(message)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-    private fun listen(ws: WebSocket): String {
+    fun listen(): String {
         var str = ""
         try {
             ws.addListener(object : WebSocketAdapter() {
@@ -64,7 +58,7 @@ class WebSocketClientSSL {
         }
         return str
     }
-    private fun close(ws: WebSocket) {
+    fun close() {
         try {
             ws.disconnect()
         } catch (e: Exception) {

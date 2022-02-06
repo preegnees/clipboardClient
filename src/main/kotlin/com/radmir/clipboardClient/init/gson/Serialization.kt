@@ -7,7 +7,8 @@ import org.springframework.stereotype.Component
 @Component
 data class Message(
     @SerializedName("who") var who: String? = null,
-    @SerializedName("text") var text: String? =null
+    @SerializedName("text") var text: String? = null,
+    @SerializedName("whom") var whom: String? = null
 )
 @Component
 class FromServer() {
