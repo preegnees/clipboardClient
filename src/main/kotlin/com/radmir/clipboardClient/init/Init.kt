@@ -40,7 +40,11 @@ class Init {
         var oldText = ""
         var newText = ""
         while (true) {
-            Thread.sleep(1000)
+            Thread.sleep(try {
+                storage.getById("timeout").value!!.toLong()
+            } catch (e: Exception) {
+                1000
+            })
             val fromClipboard = service.getFromClipboard()
             newText = fromClipboard
             if (isRun(fromClipboard)) {
